@@ -509,6 +509,11 @@ namespace HelloWorld
     {
         private int _val;
 
+        public void Copy(Foo other)
+        {
+            _val = other._val;
+        }
+
         // method comment
         public Foo(int val)
         {
@@ -523,11 +528,6 @@ namespace HelloWorld
             {
                 _val = 5;
             }
-        }
-
-        public void Copy(Foo other)
-        {
-            _val = other._val;
         }
 
         public string Print(string s1, string s2 /* param comment */)

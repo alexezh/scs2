@@ -8,83 +8,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace scs2
 {
-    class TypeGenerator : BaseGenerator
-    {
-        public TypeGenerator(TsWriter writer, SemanticModel model)
-            : base(writer, model)
-        {
-        }
-
-        public static void Generate(TsWriter writer, SemanticModel model, SyntaxNode node)
-        {
-            var generator = new TypeGenerator(writer, model);
-            generator.Visit(node);
-        }
-
-        public override SyntaxNode VisitPointerType(PointerTypeSyntax node)
-        {
-            return base.VisitPointerType(node);
-        }
-
-        public override SyntaxNode VisitRefType(RefTypeSyntax node)
-        {
-            return base.VisitRefType(node);
-        }
-
-        public override SyntaxNode VisitPredefinedType(PredefinedTypeSyntax node)
-        {
-            _writer.Write(ToTsType(node));
-            return node;
-        }
-
-        private string ToTsType(PredefinedTypeSyntax node)
-        {
-            switch (node.ToString())
-            {
-                case "int": return "number";
-                case "string": return "string";
-                default: ThrowNotSupportedSyntax(node); return "";
-            }
-        }
-    }
-
-    class MemberAccessGenerator : BaseGenerator
-    {
-        private string _fullMemberName;
-        private INamedTypeSymbol _classSymbol;
-
-        public MemberAccessGenerator(TsWriter writer, SemanticModel model, INamedTypeSymbol classSymbol)
-            : base(writer, model)
-        {
-            _classSymbol = classSymbol;
-        }
-
-        internal static void Generate(TsWriter writer, SemanticModel model, INamedTypeSymbol classSymbol, MemberAccessExpressionSyntax node)
-        {
-            var generator = new MemberAccessGenerator(writer, model, classSymbol);
-
-            generator.VisitMemberAccessExpression(node);
-
-            writer.Write(generator._fullMemberName);
-        }
-
-        public override SyntaxNode VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
-        {
-            var op = node.OperatorToken.ToString();
-            if (op != ".")
-            {
-                ThrowNotSupportedSyntax(node);
-            }
-
-            return base.VisitMemberAccessExpression(node);
-        }
-
-        public override SyntaxNode VisitIdentifierName(IdentifierNameSyntax node)
-        {
-            _fullMemberName = (_fullMemberName != null) ? String.Concat(_fullMemberName, ".", node.Identifier.ToString()) : node.Identifier.ToString();
-            return node;
-        }
-    }
 
     class FunctionGenerator : BaseGenerator
     {
@@ -122,7 +45,7 @@ namespace scs2
 
         public override SyntaxNode VisitBlock(BlockSyntax node)
         {
-            using (var block = _writer.StartBlock())
+            using (var block = _writer.StartBlock(node.OpenBraceToken.ToFullString(), node.CloseBraceToken.ToFullString()))
             {
                 return base.VisitBlock(node);
             }
@@ -130,7 +53,7 @@ namespace scs2
 
         public override SyntaxNode VisitParameterList(ParameterListSyntax node)
         {
-            using (var block = _writer.StartBlock('(', ')'))
+            using (var block = _writer.StartBlock(node.OpenParenToken.ToFullString(), node.CloseParenToken.ToString()))
             {
                 bool addSeparator = false;
                 foreach (var param in node.Parameters)
@@ -149,13 +72,9 @@ namespace scs2
 
         public override SyntaxNode VisitParameter(ParameterSyntax node)
         {
-            WriteLeadingTrivia(node);
-
             _writer.Write(node.Identifier.ToString());
             _writer.Write(": ");
             TypeGenerator.Generate(_writer, _model, node.Type);
-
-            WriteTrailingTrivia(node);
 
             return node;
         }
@@ -181,14 +100,12 @@ namespace scs2
         public override SyntaxNode VisitIfStatement(IfStatementSyntax node)
         {
             _writer.Write("if");
-            using (var block = _writer.StartParentesis())
+            using (var block = _writer.StartBlock(node.OpenParenToken.ToFullString(), node.CloseParenToken.ToFullString()))
             {
                 Visit(node.Condition);
             }
-            using (var block = _writer.StartBlock())
-            {
-                Visit(node.Statement);
-            }
+
+            Visit(node.Statement);
             if (node.Else != null)
             {
                 Visit(node.Else);
@@ -232,7 +149,13 @@ namespace scs2
 
         public override SyntaxNode VisitExpressionStatement(ExpressionStatementSyntax node)
         {
-            return base.VisitExpressionStatement(node);
+            base.VisitExpressionStatement(node);
+            if (node.SemicolonToken != null)
+            {
+                _writer.Write(";");
+            }
+
+            return node;
         }
 
         public override SyntaxNode VisitLiteralExpression(LiteralExpressionSyntax node)
@@ -286,11 +209,6 @@ namespace scs2
             }
 
             return node;
-        }
-
-        public override SyntaxNode VisitConstantPattern(ConstantPatternSyntax node)
-        {
-            return base.VisitConstantPattern(node);
         }
     }
 }

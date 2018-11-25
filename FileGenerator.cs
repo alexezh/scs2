@@ -29,9 +29,9 @@ namespace scs2
         public class Block : IDisposable
         {
             private TsWriter _writer;
-            private char _closeToken;
+            private string _closeToken;
 
-            internal Block(TsWriter writer, char closeToken)
+            internal Block(TsWriter writer, string closeToken)
             {
                 _writer = writer;
                 _closeToken = closeToken;
@@ -43,23 +43,13 @@ namespace scs2
             }
         }
 
-        public Block StartBlock()
-        {
-            return StartBlock('{', '}');
-        }
-
-        public Block StartParentesis()
-        {
-            return StartBlock('(', ')');
-        }
-
-        public Block StartBlock(char openToken, char closeToken)
+        public Block StartBlock(string openToken, string closeToken)
         {
             Writer.Write(openToken);
             return new Block(this, closeToken);
         }
 
-        private void EndBlock(char closeToken)
+        private void EndBlock(string closeToken)
         {
             Writer.Write(closeToken);
         }
