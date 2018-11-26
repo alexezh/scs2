@@ -18,10 +18,12 @@ namespace scs2
         {
         }
 
-        public static void Generate(TsWriter writer, SemanticModel model, SyntaxNode node)
+        public static string Generate(SemanticModel model, SyntaxNode node)
         {
+            var writer = new TsWriter();
             var generator = new TypeGenerator(writer, model);
             generator.Visit(node);
+            return writer.Writer.ToString();
         }
 
         public override SyntaxNode VisitPointerType(PointerTypeSyntax node)
@@ -69,6 +71,7 @@ namespace scs2
             {
                 case "int": return "number";
                 case "string": return "string";
+                case "void": return "void";
                 default: ThrowNotSupportedSyntax(node); return "";
             }
         }

@@ -9,50 +9,32 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace scs2
 {
 
-    class FunctionGenerator : BaseGenerator
+    class ParameterListGenerator : BaseGenerator
     {
-        private INamedTypeSymbol _classSymbol;
+        private string _returnType;
 
-        public FunctionGenerator(TsWriter writer, SemanticModel model, INamedTypeSymbol classSymbol)
+        public ParameterListGenerator(TsWriter writer, SemanticModel model, string returnType)
             : base(writer, model)
         {
-            _classSymbol = classSymbol;
+            _returnType = returnType;
         }
 
-        public static SyntaxNode GenerateMethod(TsWriter writer, SemanticModel model, INamedTypeSymbol classSymbol, MethodDeclarationSyntax node)
+        internal static void Generate(TsWriter writer, SemanticModel model, ParameterListSyntax parameterList, string returnType)
         {
-            var visitor = new FunctionGenerator(writer, model, classSymbol);
-
-            writer.Write(node.Identifier.ToString());
-            visitor.Visit(node.ParameterList);
-
-            writer.Write(": ");
-            writer.Write(node.ReturnType.ToString());
-            visitor.Visit(node.Body);
-            return node;
-        }
-
-        public static SyntaxNode GenerateMethod(TsWriter writer, SemanticModel model, INamedTypeSymbol classSymbol, ConstructorDeclarationSyntax node)
-        {
-            var visitor = new FunctionGenerator(writer, model, classSymbol);
-
-            writer.Write("constructor");
-            visitor.Visit(node.ParameterList);
-
-            visitor.Visit(node.Body);
-            return node;
-        }
-
-        public override SyntaxNode VisitBlock(BlockSyntax node)
-        {
-            using (var block = _writer.StartBlock(node.OpenBraceToken.ToFullString(), node.CloseBraceToken.ToFullString()))
-            {
-                return base.VisitBlock(node);
-            }
+            var generator = new ParameterListGenerator(writer, model, returnType);
+            generator.Visit(parameterList);
         }
 
         public override SyntaxNode VisitParameterList(ParameterListSyntax node)
         {
+            var closeToken = node.CloseParenToken.ToString();
+            if (_returnType != null)
+            {
+                int idx = closeToken.IndexOf(')');
+                closeToken = closeToken.Insert(idx + 1, _returnType);
+            }
+
+            // take ) out of parameter list
             using (var block = _writer.StartBlock(node.OpenParenToken.ToFullString(), node.CloseParenToken.ToString()))
             {
                 bool addSeparator = false;
@@ -74,9 +56,52 @@ namespace scs2
         {
             _writer.Write(node.Identifier.ToString());
             _writer.Write(": ");
-            TypeGenerator.Generate(_writer, _model, node.Type);
+            _writer.Write(TypeGenerator.Generate(_model, node.Type));
 
             return node;
+        }
+    }
+
+    class FunctionGenerator : BaseGenerator
+    {
+        private INamedTypeSymbol _classSymbol;
+
+        public FunctionGenerator(TsWriter writer, SemanticModel model, INamedTypeSymbol classSymbol)
+            : base(writer, model)
+        {
+            _classSymbol = classSymbol;
+        }
+
+        public static SyntaxNode GenerateMethod(TsWriter writer, SemanticModel model, INamedTypeSymbol classSymbol, MethodDeclarationSyntax node)
+        {
+            var visitor = new FunctionGenerator(writer, model, classSymbol);
+
+            writer.Write(node.Identifier.ToString());
+
+            string returnType = $": {TypeGenerator.Generate(model, node.ReturnType)}";
+            ParameterListGenerator.Generate(writer, model, node.ParameterList, returnType);
+
+            visitor.Visit(node.Body);
+            return node;
+        }
+
+        public static SyntaxNode GenerateMethod(TsWriter writer, SemanticModel model, INamedTypeSymbol classSymbol, ConstructorDeclarationSyntax node)
+        {
+            var visitor = new FunctionGenerator(writer, model, classSymbol);
+
+            writer.Write("constructor");
+            ParameterListGenerator.Generate(writer, model, node.ParameterList, null);
+
+            visitor.Visit(node.Body);
+            return node;
+        }
+
+        public override SyntaxNode VisitBlock(BlockSyntax node)
+        {
+            using (var block = _writer.StartBlock(node.OpenBraceToken.ToFullString(), node.CloseBraceToken.ToFullString()))
+            {
+                return base.VisitBlock(node);
+            }
         }
 
         public override SyntaxNode VisitAssignmentExpression(AssignmentExpressionSyntax node)
