@@ -78,10 +78,38 @@ namespace scs2
 
         public override SyntaxNode Visit(SyntaxNode node)
         {
-            WriteLeadingTrivia(node);
+//            WriteLeadingTrivia(node);
             base.Visit(node);
-            WriteTrailingTrivia(node);
+//            WriteTrailingTrivia(node);
             return node;
+        }
+
+        /// <summary>
+        /// if would be nice to output trivia in base implementation of Visit
+        /// but we endup replicating trivia when we output ToFullString. Instead
+        /// use WithTrivia method
+        /// </summary>
+        internal class Trivia : IDisposable
+        {
+            private BaseGenerator _owner;
+            private SyntaxNode _node;
+
+            public Trivia(BaseGenerator owner, SyntaxNode node)
+            {
+                _owner = owner;
+                _node = node;
+                _owner.WriteLeadingTrivia(_node);
+            }
+
+            public void Dispose()
+            {
+                _owner.WriteTrailingTrivia(_node);
+            }
+        }
+
+        internal Trivia WithTrivia(SyntaxNode node)
+        {
+            return new Trivia(this, node);
         }
 
         public void WriteLeadingTrivia(SyntaxNode node)

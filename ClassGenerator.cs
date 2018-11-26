@@ -31,18 +31,50 @@ namespace scs2
             classVisitor.VisitClassDeclaration(node);
         }
 
+        public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node)
+        {
+            using (WithTrivia(node))
+            {
+                _writer.Write("class ");
+                _writer.Write(node.Identifier.ToString());
+                using (var block = _writer.StartBlock(node.OpenBraceToken.ToFullString(), node.CloseBraceToken.ToFullString()))
+                {
+                    base.VisitClassDeclaration(node);
+                }
+
+                return node;
+            }
+        }
+
         public override SyntaxNode VisitFieldDeclaration(FieldDeclarationSyntax node)
         {
-            // return base.VisitFieldDeclaration(node);
-            return node;
+            using (WithTrivia(node))
+            {
+                var tsType = TypeGenerator.Generate(_model, node.Declaration.Type);
+                if (node.Declaration.Variables.Count > 1)
+                {
+                    ThrowNotSupportedSyntax(node);
+                }
+
+                Visit(node.Declaration.Variables[0]);
+                _writer.Write(": ");
+                _writer.Write(tsType);
+                _writer.Write(node.SemicolonToken.ToString());
+
+                return node;
+            }
         }
 
         public override SyntaxNode VisitPropertyDeclaration(PropertyDeclarationSyntax node)
         {
-            _writer.Writer.WriteLine(node.ToString());
-            //var accessorList = node.AccessorList;
-            
-            return base.VisitPropertyDeclaration(node);
+            using (WithTrivia(node))
+            {
+
+                _writer.Writer.WriteLine(node.ToString());
+                //var accessorList = node.AccessorList;
+
+                return base.VisitPropertyDeclaration(node);
+            }
         }
 
         public override SyntaxNode VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
@@ -53,6 +85,44 @@ namespace scs2
         public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
             return FunctionGenerator.GenerateMethod(_writer, _model, _classSymbol, node);
+        }
+
+        public override SyntaxNode VisitIdentifierName(IdentifierNameSyntax node)
+        {
+            using (WithTrivia(node))
+            {
+                var symbolInfo = _model.GetSymbolInfo(node);
+
+                switch (symbolInfo.Symbol.Kind)
+                {
+                    case SymbolKind.Field:
+                        _writer.Write(node.Identifier.ToString());
+                        break;
+                    case SymbolKind.NamedType:
+                        break;
+                    default:
+                        ThrowNotSupportedSyntax(node);
+                        break;
+                }
+
+                return node;
+            }
+        }
+
+        public override SyntaxNode VisitVariableDeclaration(VariableDeclarationSyntax node)
+        {
+            return base.VisitVariableDeclaration(node);
+        }
+
+        public override SyntaxNode VisitVariableDeclarator(VariableDeclaratorSyntax node)
+        {
+            _writer.Write(node.Identifier.ToString());
+            return node;
+        }
+
+        public override SyntaxToken VisitToken(SyntaxToken token)
+        {
+            return base.VisitToken(token);
         }
     }
 }
