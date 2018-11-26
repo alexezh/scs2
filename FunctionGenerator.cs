@@ -165,6 +165,14 @@ namespace scs2
             return node;
         }
 
+        public override SyntaxNode VisitArgumentList(ArgumentListSyntax node)
+        {
+            using (_writer.StartBlock(node.OpenParenToken.ToFullString(), node.CloseParenToken.ToFullString()))
+            {
+                return base.VisitArgumentList(node);
+            }
+        }
+
         public override SyntaxNode VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             MemberAccessGenerator.Generate(_writer, _model, _classSymbol, node);
