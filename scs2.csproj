@@ -147,6 +147,7 @@
     <Compile Include="MemberAccessGenerator.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TsWriter.cs" />
     <Compile Include="TypeGenerator.cs" />
   </ItemGroup>
   <ItemGroup>

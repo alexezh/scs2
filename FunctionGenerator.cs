@@ -34,6 +34,7 @@ namespace scs2
                 closeToken = closeToken.Insert(idx + 1, _returnType);
             }
 
+            // _writer.SuppressTrivia();
             // take ) out of parameter list
             using (var block = _writer.StartBlock(node.OpenParenToken.ToFullString(), node.CloseParenToken.ToString()))
             {
@@ -98,6 +99,7 @@ namespace scs2
 
         public override SyntaxNode VisitBlock(BlockSyntax node)
         {
+            _writer.SuppressTrivia();
             using (var block = _writer.StartBlock(node.OpenBraceToken.ToFullString(), node.CloseBraceToken.ToFullString()))
             {
                 return base.VisitBlock(node);
@@ -125,6 +127,8 @@ namespace scs2
         public override SyntaxNode VisitIfStatement(IfStatementSyntax node)
         {
             _writer.Write("if");
+
+            // _writer.SuppressTrivia();
             using (var block = _writer.StartBlock(node.OpenParenToken.ToFullString(), node.CloseParenToken.ToFullString()))
             {
                 Visit(node.Condition);

@@ -9,57 +9,6 @@ using System.IO;
 
 namespace scs2
 {
-    public enum TsAccess
-    {
-        Public,
-        Private,
-    }
-
-    public class TsMethod
-    {
-        public TsAccess Access;
-        public string Name;
-        public string Body;
-    }
-
-    class TsWriter
-    {
-        public readonly TextWriter Writer = new StringWriter(new StringBuilder());
-
-        public class Block : IDisposable
-        {
-            private TsWriter _writer;
-            private string _closeToken;
-
-            internal Block(TsWriter writer, string closeToken)
-            {
-                _writer = writer;
-                _closeToken = closeToken;
-            }
-
-            public void Dispose()
-            {
-                _writer.EndBlock(_closeToken);
-            }
-        }
-
-        public Block StartBlock(string openToken, string closeToken)
-        {
-            Writer.Write(openToken);
-            return new Block(this, closeToken);
-        }
-
-        private void EndBlock(string closeToken)
-        {
-            Writer.Write(closeToken);
-        }
-
-        public void Write(string val)
-        {
-            Writer.Write(val);
-        }
-    }
-
     class BaseGenerator : Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter
     {
         protected TsWriter _writer;
@@ -78,62 +27,10 @@ namespace scs2
 
         public override SyntaxNode Visit(SyntaxNode node)
         {
-//            WriteLeadingTrivia(node);
+            _writer.StartNode(node);
             base.Visit(node);
-//            WriteTrailingTrivia(node);
+            _writer.EndNode(node);
             return node;
-        }
-
-        /// <summary>
-        /// if would be nice to output trivia in base implementation of Visit
-        /// but we endup replicating trivia when we output ToFullString. Instead
-        /// use WithTrivia method
-        /// </summary>
-        internal class Trivia : IDisposable
-        {
-            private BaseGenerator _owner;
-            private SyntaxNode _node;
-
-            public Trivia(BaseGenerator owner, SyntaxNode node)
-            {
-                _owner = owner;
-                _node = node;
-                _owner.WriteLeadingTrivia(_node);
-            }
-
-            public void Dispose()
-            {
-                _owner.WriteTrailingTrivia(_node);
-            }
-        }
-
-        internal Trivia WithTrivia(SyntaxNode node)
-        {
-            return new Trivia(this, node);
-        }
-
-        public void WriteLeadingTrivia(SyntaxNode node)
-        {
-            var triviaList = node?.GetLeadingTrivia();
-            if (triviaList != null)
-            {
-                foreach (var trivia in triviaList)
-                {
-                    trivia.WriteTo(_writer.Writer);
-                }
-            }
-        }
-
-        public void WriteTrailingTrivia(SyntaxNode node)
-        {
-            var triviaList = node?.GetTrailingTrivia();
-            if (triviaList != null)
-            {
-                foreach (var trivia in triviaList)
-                {
-                    trivia.WriteTo(_writer.Writer);
-                }
-            }
         }
     }
 

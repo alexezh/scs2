@@ -23,7 +23,7 @@ namespace scs2
             var writer = new TsWriter();
             var generator = new TypeGenerator(writer, model);
             generator.Visit(node);
-            return writer.Writer.ToString();
+            return writer.Output.ToString();
         }
 
         public override SyntaxNode VisitPointerType(PointerTypeSyntax node)
