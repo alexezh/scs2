@@ -26,6 +26,21 @@ namespace HelloWorld
     public class Foo
     {
         private int _val;
+        private int _val2;
+
+        public int Val => _val;
+
+        public int Val2
+        {
+            get 
+            {
+                return _val2;
+            }
+            set
+            {
+                _val2 = value;
+            }
+        }
 
         public void Copy(Foo other)
         {
@@ -69,6 +84,9 @@ namespace HelloWorld
     {
         static void Main(string[] args)
         {
+            var bar = new Bar();
+            bar.Val2 = 3;
+
             Console.WriteLine(""Hello, World!"");
         }
     }
@@ -88,27 +106,6 @@ namespace HelloWorld
             GenerateTypeScript(model, root);
 
             Console.WriteLine(">>>> done <<<< ");
-
-/*
-            var helloWorldString = root.DescendantNodes()
-                                       .OfType<LiteralExpressionSyntax>()
-                                       .First();
-
-            var literalInfo = model.GetTypeInfo(helloWorldString);
-
-            var stringTypeSymbol = (INamedTypeSymbol)literalInfo.Type;
-
-            Console.Clear();
-            foreach (var name in (from method in stringTypeSymbol.GetMembers()
-                                                              .OfType<IMethodSymbol>()
-                                  where method.ReturnType.Equals(stringTypeSymbol) &&
-                                        method.DeclaredAccessibility ==
-                                                   Accessibility.Public
-                                  select method.Name).Distinct())
-            {
-                Console.WriteLine(name);
-            }
-*/
         }
 
         static void GenerateTypeScript(SemanticModel model, CompilationUnitSyntax syntaxTree)

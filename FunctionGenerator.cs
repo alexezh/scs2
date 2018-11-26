@@ -43,7 +43,7 @@ namespace scs2
                 {
                     if (addSeparator)
                     {
-                        _writer.Write(",");
+                        _writer.Write(", ");
                     }
                     Visit(param);
                     addSeparator = true;
@@ -95,6 +95,14 @@ namespace scs2
 
             visitor.Visit(node.Body);
             return node;
+        }
+
+        public static void GenerateMethod(TsWriter writer, SemanticModel model, INamedTypeSymbol classSymbol, ExpressionSyntax node)
+        {
+            var generator = new MemberAccessGenerator(writer, model, classSymbol);
+
+            writer.Write("return ");
+            generator.Visit(node);
         }
 
         public override SyntaxNode VisitBlock(BlockSyntax node)
@@ -169,8 +177,19 @@ namespace scs2
         {
             using (_writer.StartBlock(node.OpenParenToken.ToFullString(), node.CloseParenToken.ToFullString()))
             {
-                return base.VisitArgumentList(node);
+                bool addSeparator = false;
+                foreach (var arg in node.Arguments)
+                {
+                    if (addSeparator)
+                    {
+                        _writer.Write(", ");
+                    }
+                    Visit(arg);
+                    addSeparator = true;
+                }
             }
+
+            return node;
         }
 
         public override SyntaxNode VisitMemberAccessExpression(MemberAccessExpressionSyntax node)

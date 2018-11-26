@@ -8,6 +8,124 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace scs2
 {
+    class BaseListGenerator : BaseGenerator
+    {
+        public BaseListGenerator(TsWriter writer, SemanticModel model)
+            : base(writer, model)
+        {
+        }
+
+        public static void Generate(TsWriter writer, SemanticModel model, BaseListSyntax baseList)
+        {
+            bool addSeparator = false;
+            var generator = new BaseListGenerator(writer, model);
+
+            foreach (var baseType in baseList.Types)
+            {
+                if (addSeparator)
+                {
+                    writer.Write(", ");
+                }
+                addSeparator = true;
+
+                generator.Visit(baseType);
+            }
+        }
+
+        public override SyntaxNode VisitIdentifierName(IdentifierNameSyntax node)
+        {
+            var symbolInfo = _model.GetSymbolInfo(node);
+
+            switch (symbolInfo.Symbol.Kind)
+            {
+                case SymbolKind.NamedType:
+                    _writer.Write(node.Identifier.ToString());
+                    break;
+                default:
+                    ThrowNotSupportedSyntax(node);
+                    break;
+            }
+
+            return node;
+        }
+    }
+
+    class PropertyDeclarationGenerator : BaseGenerator
+    {
+        private INamedTypeSymbol _classSymbol;
+        private string _propertyName;
+
+        public PropertyDeclarationGenerator(TsWriter writer, SemanticModel model, INamedTypeSymbol classSymbol)
+            : base(writer, model)
+        {
+            _classSymbol = classSymbol;
+        }
+
+        public static void Generate(TsWriter writer, SemanticModel model, INamedTypeSymbol classSymbol, PropertyDeclarationSyntax node)
+        {
+            var generator = new PropertyDeclarationGenerator(writer, model, classSymbol);
+
+            generator._propertyName = node.Identifier.ToString();
+
+            if (node.AccessorList != null)
+            {
+                generator.Visit(node.AccessorList);
+            }
+            else if (node.ExpressionBody != null)
+            {
+                generator.Visit(node.ExpressionBody);
+            }
+            else
+            {
+                generator.ThrowNotSupportedSyntax(node);
+            }
+        }
+
+        public override SyntaxNode VisitAccessorDeclaration(AccessorDeclarationSyntax node)
+        {
+            return base.VisitAccessorDeclaration(node);
+        }
+
+        public override SyntaxNode VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
+        {
+            _writer.Write($"get_{_propertyName}()");
+
+            using (_writer.StartBlock("{", "}"))
+            {
+                FunctionGenerator.GenerateMethod(_writer, _model, _classSymbol, node.Expression);
+            }
+
+            return node;
+        }
+
+        public override SyntaxNode VisitIdentifierName(IdentifierNameSyntax node)
+        {
+            var symbolInfo = _model.GetSymbolInfo(node);
+            if (symbolInfo.Symbol == null)
+            {
+                ThrowNotSupportedSyntax(node);
+            }
+
+            switch (symbolInfo.Symbol.Kind)
+            {
+                case SymbolKind.Field:
+                    _writer.Write(node.Identifier.ToString());
+                    break;
+                case SymbolKind.NamedType:
+                    _writer.Write(node.Identifier.ToString());
+                    break;
+                case SymbolKind.Parameter:
+                    _writer.Write(node.Identifier.ToString());
+                    break;
+                default:
+                    ThrowNotSupportedSyntax(node);
+                    break;
+            }
+
+            return node;
+        }
+    }
+
     class ClassGenerator : BaseGenerator
     {
         private INamedTypeSymbol _classSymbol;
@@ -35,7 +153,15 @@ namespace scs2
         {
             _writer.Write("class ");
             _writer.Write(node.Identifier.ToString());
-            //_writer.SuppressTrivia();
+
+            if (node?.BaseList?.Types != null && node.BaseList.Types.Count > 0)
+            {
+                _writer.Write(" extends ");
+
+                BaseListGenerator.Generate(_writer, _model, node.BaseList);
+            }
+
+            _writer.SuppressTrivia();
             using (var block = _writer.StartBlock(node.OpenBraceToken.ToFullString(), node.CloseBraceToken.ToFullString()))
             {
                 base.VisitClassDeclaration(node);
@@ -62,8 +188,8 @@ namespace scs2
 
         public override SyntaxNode VisitPropertyDeclaration(PropertyDeclarationSyntax node)
         {
-            _writer.Write(node.ToString());
-            return base.VisitPropertyDeclaration(node);
+            PropertyDeclarationGenerator.Generate(_writer, _model, _classSymbol, node);
+            return node;
         }
 
         public override SyntaxNode VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
