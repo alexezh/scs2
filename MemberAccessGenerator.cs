@@ -45,8 +45,32 @@ namespace scs2
 
         public override SyntaxNode VisitIdentifierName(IdentifierNameSyntax node)
         {
+            var symbolInfo = _model.GetSymbolInfo(node);
+
+            switch (symbolInfo.Symbol.Kind)
+            {
+                // case SymbolKind.Property:
+            }
             _fullMemberName = (_fullMemberName != null) ? String.Concat(_fullMemberName, ".", node.Identifier.ToString()) : node.Identifier.ToString();
             return node;
+        }
+    }
+
+    class IdentifierNameScanner : Microsoft.CodeAnalysis.CSharp.CSharpSyntaxRewriter
+    {
+        private IdentifierNameSyntax _node;
+
+        public override SyntaxNode VisitIdentifierName(IdentifierNameSyntax node)
+        {
+            _node = node;
+            return node;
+        }
+
+        public static IdentifierNameSyntax GetLastIdentifier(ExpressionSyntax node)
+        {
+            var scanner = new IdentifierNameScanner();
+            scanner.Visit(node);
+            return scanner._node;
         }
     }
 }

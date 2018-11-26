@@ -22,6 +22,18 @@ using System.Text;
  
 namespace HelloWorld
 {
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            var bar = new Bar();
+            bar.Val2 = 3;
+            bar.Val3 = 4;
+
+            Console.WriteLine(""Hello, World!"");
+        }
+    }
+
     // well
     public class Foo
     {
@@ -41,6 +53,8 @@ namespace HelloWorld
                 _val2 = value;
             }
         }
+
+        public int Val3;
 
         public void Copy(Foo other)
         {
@@ -77,17 +91,6 @@ namespace HelloWorld
             : base(val)
         {
             _name = name;
-        }
-    }
-
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            var bar = new Bar();
-            bar.Val2 = 3;
-
-            Console.WriteLine(""Hello, World!"");
         }
     }
 }");

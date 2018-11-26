@@ -116,18 +116,36 @@ namespace scs2
 
         public override SyntaxNode VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
-            Visit(node.Left);
-            var op = node.OperatorToken.ToString();
-            switch (op)
+            // we might need replace "=" with setter but for this we have to know the kind of last symbol
+            // use two pass approach
+            var lastIdentifier = IdentifierNameScanner.GetLastIdentifier(node.Left);
+            var lastIdentifierInfo = _model.GetSymbolInfo(lastIdentifier);
+
+            _writer.OnVisitNode(lastIdentifier, (x) =>
             {
-                case "=":
-                case "+=":
-                    _writer.Write(op);
-                    break;
-                default:
-                    ThrowNotSupportedSyntax(node); return null;
-            }
-            Visit(node.Right);
+                if (lastIdentifierInfo.Symbol.Kind == SymbolKind.Property)
+                {
+                }
+                else if (lastIdentifierInfo.Symbol.Kind == SymbolKind.Field)
+                {
+                    Visit(node.Left);
+                    var op = node.OperatorToken.ToString();
+                    switch (op)
+                    {
+                        case "=":
+                        case "+=":
+                            _writer.Write(op);
+                            break;
+                        default:
+                            ThrowNotSupportedSyntax(node); return null;
+                    }
+                    Visit(node.Right);
+                }
+                else
+                {
+                    ThrowNotSupportedSyntax(node);
+                }
+            });
 
             return node;
         }
@@ -256,6 +274,10 @@ namespace scs2
                         break;
                     }
                 case SymbolKind.Parameter:
+                    // otherwise this is primitive type of some sort
+                    _writer.Write(node.Identifier.ToString());
+                    break;
+                case SymbolKind.NamedType:
                     // otherwise this is primitive type of some sort
                     _writer.Write(node.Identifier.ToString());
                     break;
